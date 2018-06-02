@@ -4,17 +4,14 @@ import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
-import android.appwidget.AppWidgetManager
-
 
 
 open class BaseActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-
         val intent = Intent(this, PromptAppWidget::class.java)
-        intent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+        intent.action = PromptAppWidget.ACTION_MAIN_APP_STOP
         this.sendBroadcast(intent)
     }
 
@@ -38,9 +35,5 @@ open class BaseActivity : AppCompatActivity() {
         }
 
         return super.onOptionsItemSelected(item)
-    }
-
-    companion object {
-        internal val TAG = "테스트"
     }
 }

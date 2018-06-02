@@ -35,6 +35,7 @@
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="ACTION_BUTTON_CLICK" />
                 <action android:name="ACTION_NEXT_CLICK" />
+                <action android:name="ACTION_MAIN_APP_STOP" />
             </intent-filter>
 
             <meta-data

@@ -16,11 +16,14 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class CalendarManager(private val context: Context) {
-    private val SHARED_PREF_FILE_NAME = "my_calendar"
-    private val ENABLED_CALENDAR_FILE_NAME = "enabled_calendar"
-    private val PREF_CALENDAR_ENABLED_SETTING_NAME = "settings_enabled"
     private val settingsEnabledPref: SharedPreferences
     private val enabledCalendarPref: SharedPreferences
+
+    companion object {
+        const val SHARED_PREF_FILE_NAME = "my_calendar"
+        const val ENABLED_CALENDAR_FILE_NAME = "enabled_calendar"
+        const val PREF_CALENDAR_ENABLED_SETTING_NAME = "settings_enabled"
+    }
 
     val enabledCalendarList: List<CalendarInfo>
         get() {

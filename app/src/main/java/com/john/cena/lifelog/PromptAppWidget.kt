@@ -3,6 +3,7 @@ package com.john.cena.lifelog
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -10,6 +11,7 @@ import android.widget.RemoteViews
 import android.widget.Toast
 import com.john.cena.lifelog.calendar.CalendarInfo
 import com.john.cena.lifelog.calendar.CalendarManager
+import com.john.cena.lifelog.write.CurrentEventStore
 import com.john.cena.lifelog.write.WriteVo
 import io.reactivex.Observable
 import java.util.*
@@ -23,61 +25,63 @@ class PromptAppWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
 
-        when(intent.action) {
-            ACTION_BUTTON_CLICK -> buttonClick(context)
-            ACTION_NEXT_CLICK -> nextButtonClick(context)
-        }
+        val manager = AppWidgetManager.getInstance(context)
+        val appWidgetIds = manager.getAppWidgetIds(ComponentName("com.john.cena.lifelog",
+                "com.john.cena.lifelog.PromptAppWidget"))
 
         if (intent.action == ACTION_BUTTON_CLICK || intent.action == ACTION_NEXT_CLICK) {
-            val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-            onUpdate(context, AppWidgetManager.getInstance(context), intArrayOf(id))
+            Observable.just(
+                    when(intent.action) {
+                        ACTION_BUTTON_CLICK -> buttonClick(context)
+                        else -> nextButtonClick(context) // ACTION_NEXT_CLICK
+                    }
+            ).subscribe({
+                    onUpdate(context, AppWidgetManager.getInstance(context), appWidgetIds)
+            })
+        }
+
+        if (intent.action == ACTION_MAIN_APP_STOP) {
+            onUpdate(context, manager, appWidgetIds)
         }
     }
 
     private fun buttonClick(context: Context) {
-        var cm = CalendarManager(context)
-        val eventCalendarPref = context.getSharedPreferences(WriteFragment.EVENT_FILE_NAME, Context.MODE_PRIVATE)
+        val cm = CalendarManager(context)
+        val currentEventStore = CurrentEventStore(context)
+        val eventCalendarPref =  currentEventStore.eventCalendarPref
         val currentCategory = getCurrentCategory(context, eventCalendarPref, cm)
 
         val writeVo = WriteVo(currentCategory.id, "", "")
         val state = eventCalendarPref.getString(WriteFragment.KEY_STATE, WriteFragment.STATE_FINISH)
         if (WriteFragment.STATE_FINISH == state) { // 종료상태. -> 진행 상태로 변경
-            eventCalendarPref.edit()
-                    .putString(WriteFragment.KEY_STATE, WriteFragment.STATE_PROGRESS)
-                    .putLong(WriteFragment.KEY_CATEGORY, writeVo.categoryId)
-                    .putString(WriteFragment.KEY_TITLE, writeVo.title)
-                    .putString(WriteFragment.KEY_CONTENT, writeVo.content)
-                    .putLong(WriteFragment.KEY_START_TIME, Calendar.getInstance().timeInMillis)
-                    .apply()
+            writeVo.state = WriteFragment.STATE_PROGRESS
+            writeVo.startTime = Calendar.getInstance().timeInMillis
+            currentEventStore.save(writeVo)
 
             Toast.makeText(context, R.string.message_start, Toast.LENGTH_SHORT).show()
         } else {
+            writeVo.state = WriteFragment.STATE_FINISH
+            writeVo.title = eventCalendarPref.getString(WriteFragment.KEY_TITLE, "")
+            writeVo.content = eventCalendarPref.getString(WriteFragment.KEY_CONTENT, "")
             writeVo.startTime = eventCalendarPref.getLong(WriteFragment.KEY_START_TIME, Calendar.getInstance().timeInMillis)
             writeVo.endTime = Calendar.getInstance().timeInMillis
 
-            Observable.just(cm.insertEvent(writeVo))
-                    .subscribe({
-                        eventCalendarPref.edit()
-                                .putString(WriteFragment.KEY_STATE, WriteFragment.STATE_FINISH)
-                                .remove(WriteFragment.KEY_CATEGORY)
-                                .remove(WriteFragment.KEY_TITLE)
-                                .remove(WriteFragment.KEY_CONTENT)
-                                .apply()
+            cm.insertEvent(writeVo)
+            currentEventStore.clear()
 
-                        Toast.makeText(context, R.string.message_finish, Toast.LENGTH_SHORT).show()
-                    })
+            Toast.makeText(context, R.string.message_finish, Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun nextButtonClick(context: Context) {
-        var cm = CalendarManager(context)
-        val eventCalendarPref = context.getSharedPreferences(WriteFragment.EVENT_FILE_NAME, Context.MODE_PRIVATE)
+        val cm = CalendarManager(context)
+        val eventCalendarPref = CurrentEventStore(context).eventCalendarPref
         val enabledCalendarList = cm.enabledCalendarList
-        val id = eventCalendarPref.getLong(WriteFragment.KEY_CATEGORY, enabledCalendarList[0]?.id)
+        val id = eventCalendarPref.getLong(WriteFragment.KEY_CATEGORY, enabledCalendarList[0].id)
 
         for (i in enabledCalendarList.indices) {
             if (enabledCalendarList[i].id == id) {
-                var nextId =
+                val nextId =
                         if (i == enabledCalendarList.size - 1) {
                             enabledCalendarList[0].id
                         } else {
@@ -102,6 +106,7 @@ class PromptAppWidget : AppWidgetProvider() {
 
         const val ACTION_BUTTON_CLICK = "ACTION_BUTTON_CLICK"
         const val ACTION_NEXT_CLICK = "ACTION_NEXT_CLICK"
+        const val ACTION_MAIN_APP_STOP = "ACTION_MAIN_APP_STOP"
 
         internal fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager,
                                      appWidgetId: Int) {
@@ -116,7 +121,7 @@ class PromptAppWidget : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.nextButton,
                     getPendingIntent(context, appWidgetId, ACTION_NEXT_CLICK))
 
-            val eventCalendarPref = context.getSharedPreferences(WriteFragment.EVENT_FILE_NAME, Context.MODE_PRIVATE)
+            val eventCalendarPref = CurrentEventStore(context).eventCalendarPref
 
             // 시작-종료 버튼 이미지
             val stat = eventCalendarPref.getString(WriteFragment.KEY_STATE, WriteFragment.STATE_FINISH)
@@ -152,8 +157,7 @@ class PromptAppWidget : AppWidgetProvider() {
         }
 
         private fun getPendingIntent(context: Context, appWidgetId: Int, action: String): PendingIntent {
-            var intent = Intent(action)
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            val intent = Intent(action)
             return PendingIntent.getBroadcast(context, 0, intent, 0)
         }
     }

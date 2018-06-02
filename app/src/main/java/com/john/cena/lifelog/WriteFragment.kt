@@ -202,12 +202,7 @@ class WriteFragment : Fragment() {
 
         Observable.just(cm.insertEvent(writeVo))
                 .subscribe({result ->
-                    // 입력 내용 초기화
-                    title.setText("")
-                    content.setText("")
-
-                    // 진행 상태. 종료상태로 변경.
-                    button.setText(R.string.start)
+                    clearForm()
 
                     eventCalendarPref.edit()
                             .putString(KEY_STATE, STATE_FINISH)
@@ -220,6 +215,15 @@ class WriteFragment : Fragment() {
                     val eventInfo = EventInfo(java.lang.Long.parseLong(result!!.lastPathSegment))
                     attachEventListView(eventInfo, EventAddPosition.FIRST, 0, {})
                 })
+    }
+
+    private fun clearForm() {
+        // 입력 내용 초기화
+        title.setText("")
+        content.setText("")
+
+        // 진행 상태. 종료상태로 변경.
+        button.setText(R.string.start)
     }
 
 
@@ -242,6 +246,8 @@ class WriteFragment : Fragment() {
             title.setText(eventCalendarPref.getString(KEY_TITLE, ""))
             content.setText(eventCalendarPref.getString(KEY_CONTENT, ""))
             button.setText(R.string.finish)
+        } else {
+            clearForm()
         }
     }
 
