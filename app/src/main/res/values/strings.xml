@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">Life Log</string>
+
+    <string name="loading">loading</string>
+
+    <string name="title">제목</string>
+    <string name="content">내용</string>
+    <string name="start">시작</string>
+    <string name="finish">종료</string>
+    <string name="btn_read_more">더보기</string>
+    <string name="modify">수정</string>
+    <string name="minute">분</string>
+    <string name="prev">Prev</string>
+    <string name="next">Next</string>
+    <string name="message_category_settings_required">카테고리 설정을 해주세요.</string>
+    <string name="message_no_more_list">더이상 이벤트가 없습니다.</string>
+    <string name="message_start">시작하였습니다.</string>
+    <string name="message_finish">종료하였습니다.</string>
+
+    <string name="action_category_settings">카테고리 설정</string>
+    <string name="title_activity_tabbed">title_activity_tabbed</string>
+
+    <string name="tab_text_1">기록</string>
+    <string name="tab_text_2">일별</string>
+    <string name="tab_text_3">월별</string>
+    <string name="title_activity_main2">Main2Activity</string>
+    <string name="action_settings">Settings</string>
+    <string name="section_format">Hello World from section: %1$d</string>
+    <string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
+</resources>
